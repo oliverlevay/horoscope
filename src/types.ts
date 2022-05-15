@@ -20,12 +20,3 @@ type UserPair = {
   myId: string;
   theirId: string;
 };
-
-enum GameState {
-  NotStarted,
-  Step1,
-  Step2,
-  Step3,
-  Step4,
-  Finished,
-}

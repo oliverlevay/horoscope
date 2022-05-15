@@ -3,28 +3,40 @@ import fastifyCors from 'fastify-cors';
 import { v4 as uuidv4 } from 'uuid';
 const helmet = require('fastify-helmet');
 
+enum GameState {
+  NotStarted,
+  Step1,
+  Step2,
+  Step3,
+  Step4,
+  Finished,
+}
+
 let gameState: GameState = GameState.NotStarted;
+let randomUsers: Map<string, User> = new Map();
+const users: User[] = [];
 
 const shuffleUsers = () => {
-  const idMap = new Map();
-  const allId = users.map((u) => u.id);
-  let hasntBeenPicked = users.map((u) => u.id);
-  for (let i: number = 0; i < allId.length; i++) {
-    const pickableId = hasntBeenPicked.filter((j) => j !== allId[i]);
-    const pickedId = pickableId[Math.floor(Math.random() * pickableId.length)];
-    if (pickedId === undefined) {
-      shuffleUsers();
-      return;
+  const idMap: Map<string, User> = new Map();
+  if (users.length === 1) {
+    idMap.set(users[0].id, users[0]);
+  } else {
+    let hasntBeenPicked = users;
+    for (let i: number = 0; i < users.length; i++) {
+      const pickableId = hasntBeenPicked.filter((j) => j.id !== users[i].id);
+      const pickedId = pickableId[Math.floor(Math.random() * pickableId.length)];
+      if (pickedId === undefined) {
+        shuffleUsers();
+        return;
+      }
+      
+      hasntBeenPicked.splice(hasntBeenPicked.indexOf(pickedId), 1);
+      idMap.set(users[i].id, pickedId);
     }
-
-    hasntBeenPicked.splice(hasntBeenPicked.indexOf(pickedId), 1);
-    idMap.set(allId[i], pickedId);
   }
   randomUsers = idMap;
 };
 
-let randomUsers: Map<string, string> = new Map();
-const users: User[] = [];
 
 // userId, sentence pairs
 const sentences: Map<string, string> = new Map();
@@ -47,24 +59,24 @@ const verbs = [
   'sleep in',
   'go to',
 ];
-const nouns = [
-  'a book',
-  'a car',
-  'a computer',
-  'a table',
-  'a chair',
-  'a pen',
-  'a pencil',
-  'a phone',
-  'Rome',
-];
-const time = [
-  'today',
-  'tomorrow',
-  'in the future',
-  'soon',
-  'in a couple of hours',
-];
+// const nouns = [
+//   'a book',
+//   'a car',
+//   'a computer',
+//   'a table',
+//   'a chair',
+//   'a pen',
+//   'a pencil',
+//   'a phone',
+//   'Rome',
+// ];
+// const time = [
+//   'today',
+//   'tomorrow',
+//   'in the future',
+//   'soon',
+//   'in a couple of hours',
+// ];
 // takes a list of words and returns 4 random ones with their index.
 const generateWordList = (words: string[]): WordList => {
   const randomWords = glues.sort(() => 0.5 - Math.random()).slice(0, 4);
@@ -276,7 +288,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       if (!ids.includes(body.id)) {
         reply.badRequest('User not found in current game.');
       }
-      const randomUser = randomUsers.get(body.id);
+      const randomUser = randomUsers.get(body.id)!;
       const sentence = `${randomUser.name} ${glues[body.index]}`;
       sentences.set(randomUser.id, sentence);
     }
