@@ -86,7 +86,7 @@ const gameInfo = () => {
 };
 
 const generateWordList = (words: string[]): WordList => {
-  const randomWords = words.sort(() => 0.5 - Math.random()).slice(0, 4);
+  const randomWords = [...words].sort(() => 0.5 - Math.random()).slice(0, 4);
   const randomIndexes = randomWords.map((word) => words.indexOf(word));
   return randomIndexes.map((index) => {
     return { index, word: words[index] };
