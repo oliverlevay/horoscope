@@ -1,4 +1,9 @@
 type User = {
-  id: number;
+  id: string;
   name: string;
+}
+
+type UserPair = {
+  myId: string;
+  theirId: string;
 }
