@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://horoscope-backend1.herokuapp.com';
 
 export const register = (name: string) => {
   return fetch(`${API_URL}/register`, {
