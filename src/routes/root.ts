@@ -141,6 +141,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
           isAdmin: users.length === 0,
         };
         users.push(user);
+        console.log(`Register ${user.name} with id ${user.id}. He/she is ${user.isAdmin} admin`);
         reply.code(201).send({ user, ...gameInfo() });
       }
     }
@@ -172,6 +173,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       gameState = GameState.Step1;
       shuffleUsers();
       usersFinishedWithStep = 0;
+      console.log(gameInfo);
       reply.code(200).send({ ...gameInfo() });
     }
   );
@@ -199,8 +201,10 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const id = body.id;
       const ids = users.map((user) => user.id);
       if (!ids.includes(id)) {
+        console.log(`There is no user with ${id}`)
         reply.badRequest('User not found');
       } else {
+        console.log(`The user with id ${id} got the words`)
         reply
           .code(201)
           .send({ wordList: generateWordList(glues), ...gameInfo() });
@@ -233,6 +237,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const body = request.body as { id: string; index: number };
       const ids = users.map((user) => user.id);
       if (!ids.includes(body.id)) {
+        console.log(`There is no user with ${body.id}`)
         reply.badRequest('User not found in current game.');
       }
       const randomUser = randomUsers.get(body.id)!;
@@ -243,6 +248,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
         usersFinishedWithStep = 0;
         shuffleUsers();
       }
+      console.log(`The user with ${body.id} sent the word ${glues[body.index]}`);
       reply.code(201).send({ ...gameInfo() });
     }
   );
@@ -270,8 +276,10 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const id = body.id;
       const ids = users.map((user) => user.id);
       if (!ids.includes(id)) {
+        console.log(`There is no user with ${body.id}`)
         reply.badRequest('User not found in current game.');
       } else {
+        console.log(`The user with id ${id} got the words`)
         reply
           .code(201)
           .send({ wordList: generateWordList(verbs), ...gameInfo() });
@@ -304,6 +312,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const body = request.body as { id: string; index: number };
       const ids = users.map((user) => user.id);
       if (!ids.includes(body.id)) {
+        console.log(`There is no user with ${body.id}`)
         reply.badRequest('User not found in current game.');
       }
       const randomUser = randomUsers.get(body.id)!;
@@ -314,6 +323,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
         usersFinishedWithStep = 0;
         shuffleUsers();
       }
+      console.log(`The user with ${body.id} sent the word ${glues[body.index]}`);
       reply.code(201).send({ ...gameInfo() });
     }
   );
@@ -341,8 +351,10 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const id = body.id;
       const ids = users.map((user) => user.id);
       if (!ids.includes(id)) {
+        console.log(`There is no user with ${body.id}`)
         reply.badRequest('User not found in current game.');
       } else {
+        console.log(`The user with id ${id} got the words`)
         reply
           .code(201)
           .send({ wordList: generateWordList(nouns), ...gameInfo() });
@@ -375,6 +387,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const body = request.body as { id: string; index: number };
       const ids = users.map((user) => user.id);
       if (!ids.includes(body.id)) {
+        console.log(`There is no user with ${body.id}`)
         reply.badRequest('User not found in current game.');
       }
       const randomUser = randomUsers.get(body.id)!;
@@ -385,6 +398,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
         usersFinishedWithStep = 0;
         shuffleUsers();
       }
+      console.log(`The user with ${body.id} sent the word ${glues[body.index]}`);
       reply.code(201).send({ ...gameInfo() });
     }
   );
