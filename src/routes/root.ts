@@ -16,6 +16,8 @@ let gameState: GameState = GameState.NotStarted;
 let randomUsers: Map<string, User> = new Map();
 const users: User[] = [];
 
+let usersFinishedWithStep = 0;
+
 const shuffleUsers = () => {
   const idMap: Map<string, User> = new Map();
   if (users.length === 1) {
@@ -24,19 +26,19 @@ const shuffleUsers = () => {
     let hasntBeenPicked = users;
     for (let i: number = 0; i < users.length; i++) {
       const pickableId = hasntBeenPicked.filter((j) => j.id !== users[i].id);
-      const pickedId = pickableId[Math.floor(Math.random() * pickableId.length)];
+      const pickedId =
+        pickableId[Math.floor(Math.random() * pickableId.length)];
       if (pickedId === undefined) {
         shuffleUsers();
         return;
       }
-      
+
       hasntBeenPicked.splice(hasntBeenPicked.indexOf(pickedId), 1);
       idMap.set(users[i].id, pickedId);
     }
   }
   randomUsers = idMap;
 };
-
 
 // userId, sentence pairs
 const sentences: Map<string, string> = new Map();
@@ -59,30 +61,35 @@ const verbs = [
   'sleep in',
   'go to',
 ];
-// const nouns = [
-//   'a book',
-//   'a car',
-//   'a computer',
-//   'a table',
-//   'a chair',
-//   'a pen',
-//   'a pencil',
-//   'a phone',
-//   'Rome',
-// ];
-// const time = [
-//   'today',
-//   'tomorrow',
-//   'in the future',
-//   'soon',
-//   'in a couple of hours',
-// ];
+const nouns = [
+  'a book',
+  'a car',
+  'a computer',
+  'a table',
+  'a chair',
+  'a pen',
+  'a pencil',
+  'a phone',
+  'Rome',
+];
+/* const time = [
+  'today',
+  'tomorrow',
+  'in the future',
+  'soon',
+  'in a couple of hours',
+]; */
 // takes a list of words and returns 4 random ones with their index.
+
+const gameInfo = () => {
+  return { gameState, usersFinishedWithStep, usersInGame: users.length };
+};
+
 const generateWordList = (words: string[]): WordList => {
-  const randomWords = glues.sort(() => 0.5 - Math.random()).slice(0, 4);
+  const randomWords = words.sort(() => 0.5 - Math.random()).slice(0, 4);
   const randomIndexes = randomWords.map((word) => words.indexOf(word));
   return randomIndexes.map((index) => {
-    return { index, word: glues[index] };
+    return { index, word: words[index] };
   });
 };
 //const shuffledUsers: User[] = [];
@@ -125,7 +132,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     async (request, reply) => {
       if (gameState !== GameState.NotStarted) {
-        reply.badRequest('Game has already started');
+        return { ...gameInfo() };
       } else {
         const body = request.body as { name: string };
         const user = {
@@ -134,7 +141,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
           isAdmin: users.length === 0,
         };
         users.push(user);
-        reply.code(201).send(user);
+        reply.code(201).send({ user, ...gameInfo() });
       }
     }
   );
@@ -145,7 +152,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       schema: {
         body: {
           type: 'object',
-          required: ['index', 'id'],
+          required: ['id'],
           properties: {
             id: {
               type: 'string',
@@ -156,7 +163,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     async (request, reply) => {
       if (gameState !== GameState.NotStarted) {
-        reply.badRequest('Game has already started');
+        return { ...gameInfo() };
       }
       const body = request.body as { id: string };
       if (!users.find((user) => user.id === body.id)?.isAdmin) {
@@ -164,12 +171,13 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       }
       gameState = GameState.Step1;
       shuffleUsers();
-      reply.code(200).send({ success: true });
+      usersFinishedWithStep = 0;
+      reply.code(200).send({ ...gameInfo() });
     }
   );
 
-  fastify.get(
-    '/step1',
+  fastify.post(
+    '/get-words/step1',
     {
       schema: {
         body: {
@@ -185,7 +193,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     async (request, reply) => {
       if (gameState !== GameState.Step1) {
-        reply.badRequest('Waiting for game to start...');
+        return { ...gameInfo() };
       }
       const body = request.body as { id: string };
       const id = body.id;
@@ -193,18 +201,20 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       if (!ids.includes(id)) {
         reply.badRequest('User not found');
       } else {
-        reply.code(201).send(generateWordList(glues));
+        reply
+          .code(201)
+          .send({ wordList: generateWordList(glues), ...gameInfo() });
       }
     }
   );
 
   fastify.post(
-    '/step1',
+    '/select-word/step1',
     {
       schema: {
         body: {
           type: 'object',
-          required: ['index', 'myId'],
+          required: ['index', 'id'],
           properties: {
             index: {
               type: 'number',
@@ -218,70 +228,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     async (request, reply) => {
       if (gameState !== GameState.Step1) {
-        reply.badRequest('Waiting for other players...');
-      }
-      const body = request.body as { id: string; index: number };
-      const ids = users.map((user) => user.id);
-      if (!ids.includes(body.id)) {
-        reply.badRequest('User not found in current game.');
-      }
-      const randomUser = users[Math.floor(Math.random() * users.length)];
-      const sentence = `${randomUser.name} ${glues[body.index]}`;
-      sentences.set(randomUser.id, sentence);
-    }
-  );
-
-  fastify.get(
-    '/step2',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['id'],
-          properties: {
-            id: {
-              type: 'string',
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      if (gameState !== GameState.NotStarted) {
-        reply.badRequest('Game has not started');
-      }
-      const body = request.body as { id: string };
-      const id = body.id;
-      const ids = users.map((user) => user.id);
-      if (!ids.includes(id)) {
-        reply.badRequest('User not found in current game.');
-      } else {
-        reply.code(201).send(generateWordList(verbs));
-      }
-    }
-  );
-
-  fastify.post(
-    '/step1',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['index', 'myId'],
-          properties: {
-            index: {
-              type: 'number',
-            },
-            id: {
-              type: 'string',
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      if (gameState !== GameState.NotStarted) {
-        reply.badRequest('Game has not started');
+        return { ...gameInfo() };
       }
       const body = request.body as { id: string; index: number };
       const ids = users.map((user) => user.id);
@@ -291,6 +238,154 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       const randomUser = randomUsers.get(body.id)!;
       const sentence = `${randomUser.name} ${glues[body.index]}`;
       sentences.set(randomUser.id, sentence);
+      if (usersFinishedWithStep === users.length) {
+        gameState = GameState.Step2;
+        usersFinishedWithStep = 0;
+        shuffleUsers();
+      }
+      reply.code(201).send({ ...gameInfo() });
+    }
+  );
+
+  fastify.post(
+    '/get-words/step2',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {
+              type: 'string',
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (gameState !== GameState.Step2) {
+        reply.badRequest('Waiting for other players...');
+      }
+      const body = request.body as { id: string };
+      const id = body.id;
+      const ids = users.map((user) => user.id);
+      if (!ids.includes(id)) {
+        reply.badRequest('User not found in current game.');
+      } else {
+        reply
+          .code(201)
+          .send({ wordList: generateWordList(verbs), ...gameInfo() });
+      }
+    }
+  );
+
+  fastify.post(
+    '/select-word/step2',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['index', 'id'],
+          properties: {
+            index: {
+              type: 'number',
+            },
+            id: {
+              type: 'string',
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (gameState !== GameState.Step2) {
+        return { ...gameInfo() };
+      }
+      const body = request.body as { id: string; index: number };
+      const ids = users.map((user) => user.id);
+      if (!ids.includes(body.id)) {
+        reply.badRequest('User not found in current game.');
+      }
+      const randomUser = randomUsers.get(body.id)!;
+      const sentence = `${sentences.get(randomUser.id)} ${verbs[body.index]}`;
+      sentences.set(randomUser.id, sentence);
+      if (usersFinishedWithStep === users.length) {
+        gameState = GameState.Step3;
+        usersFinishedWithStep = 0;
+        shuffleUsers();
+      }
+      reply.code(201).send({ ...gameInfo() });
+    }
+  );
+
+  fastify.post(
+    '/get-words/step3',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {
+              type: 'string',
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (gameState !== GameState.Step3) {
+        return { ...gameInfo() };
+      }
+      const body = request.body as { id: string };
+      const id = body.id;
+      const ids = users.map((user) => user.id);
+      if (!ids.includes(id)) {
+        reply.badRequest('User not found in current game.');
+      } else {
+        reply
+          .code(201)
+          .send({ wordList: generateWordList(nouns), ...gameInfo() });
+      }
+    }
+  );
+
+  fastify.post(
+    '/select-word/step3',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['index', 'id'],
+          properties: {
+            index: {
+              type: 'number',
+            },
+            id: {
+              type: 'string',
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (gameState !== GameState.Step3) {
+        return { ...gameInfo() };
+      }
+      const body = request.body as { id: string; index: number };
+      const ids = users.map((user) => user.id);
+      if (!ids.includes(body.id)) {
+        reply.badRequest('User not found in current game.');
+      }
+      const randomUser = randomUsers.get(body.id)!;
+      const sentence = `${sentences.get(randomUser.id)} ${nouns[body.index]}`;
+      sentences.set(randomUser.id, sentence);
+      if (usersFinishedWithStep === users.length) {
+        gameState = GameState.Finished;
+        usersFinishedWithStep = 0;
+        shuffleUsers();
+      }
+      reply.code(201).send({ ...gameInfo() });
     }
   );
 };
