@@ -6,6 +6,7 @@ import Step1 from './Steps/Step1';
 import Step2 from './Steps/Step 2';
 import Step3 from './Steps/Step 3';
 import Step4 from './Steps/Step 4';
+import Finish from './Steps/Finish';
 
 export default function App() {
   const [gameState, setGameState] = useState(GameState.NotStarted);
@@ -74,6 +75,7 @@ export default function App() {
       {gameState === GameState.Step4 && myId !== undefined && (
         <Step4 myId={myId} gameState={gameState} setGameState={setGameState} />
       )}
+      {gameState === GameState.Finished && myId !== undefined && <Finish />}
     </Stack>
   );
 }

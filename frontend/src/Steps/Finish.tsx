@@ -3,18 +3,15 @@ import { Button, Stack, Typography } from '@mui/material';
 import { GameState, WordList } from '../types';
 import { fetchSentences } from '../api';
 
-export default function Step1({
-  myId,
-  setGameState,
-}: {
-  myId: string;
-  gameState: GameState;
-  setGameState: (gameState: GameState) => void;
-}) {
+export default function Finish() {
   const [sentences, setSentences] = useState<string[]>([]);
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchSentences().then((res) => res.json());
+      fetchSentences()
+        .then((res) => res.json())
+        .then((data) => {
+          setSentences(data.sentences);
+        });
     }, 1000);
     return () => {
       clearInterval(interval);
