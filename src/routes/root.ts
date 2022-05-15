@@ -2,6 +2,10 @@ import { FastifyPluginAsync } from 'fastify';
 import fastifyCors from 'fastify-cors';
 const helmet = require('fastify-helmet');
 
+let gameHasStarted = false;
+
+const users: User[] = [];
+const shuffledUsers: User[] = [];
 
 const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   fastify.register(helmet, (instance) => {
@@ -19,51 +23,34 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     origin: '*',
   });
 
-  fastify.register(require('fastify-swagger'), {
-    routePrefix: '/documentation',
-    swagger: {
-      info: {
-        title: 'Dsek order API',
-        description: 'Backend for our internal order system',
-        version: '0.1.0',
-      },
-      host: 'dsek-order-app.herokuapp.com',
-      schemes: ['https'],
-      consumes: ['application/json'],
-      produces: ['application/json'],
-      securityDefinitions: {
-        apiKey: {
-          type: 'apiKey',
-          name: 'apiKey',
-          in: 'header',
+  fastify.get('/', async (request, reply) => {
+    return { gameHasStarted };
+  });
+
+  fastify.post(
+    '/register',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: {
+              type: 'string',
+            },
+          },
         },
       },
     },
-    uiConfig: {
-      docExpansion: 'full',
-      deepLinking: false,
-    },
-    staticCSP: true,
-    exposeRoute: true,
-  });
-
-  fastify.addContentTypeParser(
-    'application/json',
-    { parseAs: 'string' },
-    function (req, body: string, done) {
-      try {
-        const json = JSON.parse(body);
-        done(null, json);
-      } catch (err: any) {
-        err.statusCode = 400;
-        done(err, undefined);
+    async (request, reply) => {
+      if (gameHasStarted) {
+        reply.badRequest('Game has already started');
+      } else {
+        const body = request.body as { name: string };
+        const user = { id: users.length, name: body.name };
+        reply.code(201).send(user);
       }
     }
-  );
-
-  fastify.get('/', async (request, reply) => { 
-    return { root: 'Hello World' };
-   }
   );
 };
 
